@@ -86,13 +86,14 @@ export class Command {
               typeof instance.description === "string" &&
               typeof instance.exec === "function" &&
               typeof instance.type === "string" &&
-              (
-                ((Config.get()!["options"]!["feature"]!["enable_dev_commands"]! && instance.devOnly) || !instance.devOnly)
-              )
-              &&
-              (
-                ((Config.get()!["options"]!["feature"]!["enable_admin_commands"]! && instance.adminOnly) || !instance.adminOnly)
-              )
+              ((Config.get()!["options"]!["feature"]!["enable_dev_commands"]! &&
+                instance.devOnly) ||
+                !instance.devOnly) &&
+              ((Config.get()!["options"]!["feature"]![
+                "enable_admin_commands"
+              ]! &&
+                instance.adminOnly) ||
+                !instance.adminOnly)
             ) {
               const existingIndex = this.commands.findIndex(
                 (cmd) => cmd.name === instance.name,
