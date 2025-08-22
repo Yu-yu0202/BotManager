@@ -128,7 +128,7 @@ export class Config {
       }
       return result;
     }
-    
+
     const config: ConfigType = mergeConfig<ConfigType>(
       userConfig as Partial<ConfigType>,
       defaultConfig as ConfigType,

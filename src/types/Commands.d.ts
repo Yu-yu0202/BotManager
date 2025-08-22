@@ -5,7 +5,21 @@ import { Interaction } from "discord.js";
  * @typedef {Object} CommandMeta
  * @property {string} name - The name of the command. if type is 'Modal' or 'Button', this is the custom ID.
  * @property {string} description - A brief description of the command.
- * @property {Record<string, any>} [options] - Optional command options.
+ * @property {
+ *   name: string;
+ *   description?: string;
+ *   type:
+ *     | "string"
+ *     | "number"
+ *     | "boolean"
+ *     | "user"
+ *     | "channel"
+ *     | "role"
+ *     | "mentionable"
+ *     | "attachment";
+ *   required?: boolean;
+ *   choices?: (string | number)[];
+ * } [options] - Optional command options.
  * @property {function} [autocomplete] - Optional function for command autocomplete.
  * @property {'text' | 'slash' | 'Button' | 'Modal'} type - The type of command.
  * @property {function} exec - The function to execute when the command is invoked.
@@ -16,7 +30,7 @@ import { Interaction } from "discord.js";
  * const command: CommandMeta = {
  *   name: 'example',
  *   description: 'An example command',
- *   options: { option1: 'value1' },
+ *   options: ,
  *   autocomplete: async (interaction) => {
  *     // Handle autocomplete logic here
  *   },
@@ -32,7 +46,21 @@ import { Interaction } from "discord.js";
 export type CommandMeta = {
   name: string;
   description: string;
-  options?: Record<string, any>;
+  options?: {
+    name: string;
+    description?: string;
+    type:
+      | "string"
+      | "number"
+      | "boolean"
+      | "user"
+      | "channel"
+      | "role"
+      | "mentionable"
+      | "attachment";
+    required?: boolean;
+    choices?: (string | number)[];
+  }[];
   autocomplete?(interaction: Interaction): Promise<void>;
   type: "slash" | "Button" | "Modal";
   exec(interaction: Interaction): Promise<void>;

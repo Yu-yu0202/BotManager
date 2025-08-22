@@ -30,6 +30,12 @@ export class BotManager {
       Logger.log(`Client Error: ${error.message}`, "error");
     });
 
+    if (configData.options?.log?.logLevel === ("verbose" as const)) {
+      this.client.on("debug", (info: string) => {
+        Logger.log(`Client Debug: ${info}`, "debug");
+      });
+    }
+
     const eventHandler = new Event(this.client);
 
     await eventHandler.load();

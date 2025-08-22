@@ -8,6 +8,7 @@ import {
 } from "discord.js";
 
 import { Logger } from "./Logger.js";
+import { Config } from "./Config.js";
 import type { AllReadonly, CommandMeta } from "../types";
 
 export class Command {
@@ -84,13 +85,31 @@ export class Command {
               typeof instance.name === "string" &&
               typeof instance.description === "string" &&
               typeof instance.exec === "function" &&
-              typeof instance.type === "string"
+              typeof instance.type === "string" &&
+              (
+                ((Config.get()!["options"]!["feature"]!["enable_dev_commands"]! && instance.devOnly) || !instance.devOnly)
+              )
+              &&
+              (
+                ((Config.get()!["options"]!["feature"]!["enable_admin_commands"]! && instance.adminOnly) || !instance.adminOnly)
+              )
             ) {
-              this.commands.push(instance as CommandMeta);
-              Logger.log(
-                `✅️ Command ${instance.name} loaded successfully.`,
-                "info",
+              const existingIndex = this.commands.findIndex(
+                (cmd) => cmd.name === instance.name,
               );
+              if (existingIndex !== -1) {
+                this.commands[existingIndex] = instance as CommandMeta;
+                Logger.log(
+                  `[Command.load()] ♻️ Command ${instance.name} reloaded (overwritten).`,
+                  "warn",
+                );
+              } else {
+                this.commands.push(instance as CommandMeta);
+                Logger.log(
+                  `✅️ Command ${instance.name} loaded successfully.`,
+                  "info",
+                );
+              }
               found = true;
             }
           }
@@ -108,10 +127,116 @@ export class Command {
       const meta: ApplicationCommandDataResolvable[] = this.commands
         .filter((cmd) => cmd.type === "slash")
         .map((cmd) => {
-          return new SlashCommandBuilder()
+          const builder = new SlashCommandBuilder()
             .setName(cmd.name)
-            .setDescription(cmd.description)
-            .toJSON();
+            .setDescription(cmd.description);
+
+          if (Array.isArray(cmd.options)) {
+            for (const opt of cmd.options) {
+              if (
+                !opt ||
+                typeof opt !== "object" ||
+                !opt.name ||
+                typeof opt.name !== "string" ||
+                !opt.type
+              )
+                continue;
+              const desc =
+                typeof opt.description === "string"
+                  ? opt.description
+                  : "No description";
+              switch (opt.type) {
+                case "string":
+                  builder.addStringOption((option) => {
+                    let o = option
+                      .setName(opt.name)
+                      .setDescription(desc)
+                      .setRequired(!!opt.required);
+                    if (Array.isArray(opt.choices)) {
+                      o = o.setChoices(
+                        ...opt.choices.map((c: any) =>
+                          typeof c === "object" && c.name && c.value
+                            ? { name: c.name, value: c.value }
+                            : { name: String(c), value: c },
+                        ),
+                      );
+                    }
+                    return o;
+                  });
+                  break;
+                case "number":
+                  builder.addNumberOption((option) => {
+                    let o = option
+                      .setName(opt.name)
+                      .setDescription(desc)
+                      .setRequired(!!opt.required);
+                    if (Array.isArray(opt.choices)) {
+                      o = o.setChoices(
+                        ...opt.choices!.map((c: any) =>
+                          typeof c === "object" && c.name && c.value
+                            ? { name: c.name, value: c.value }
+                            : { name: String(c), value: c },
+                        ),
+                      );
+                    }
+                    return o;
+                  });
+                  break;
+                case "boolean":
+                  builder.addBooleanOption((option) =>
+                    option
+                      .setName(opt.name)
+                      .setDescription(desc)
+                      .setRequired(!!opt.required),
+                  );
+                  break;
+                case "user":
+                  builder.addUserOption((option) =>
+                    option
+                      .setName(opt.name)
+                      .setDescription(desc)
+                      .setRequired(!!opt.required),
+                  );
+                  break;
+                case "channel":
+                  builder.addChannelOption((option) =>
+                    option
+                      .setName(opt.name)
+                      .setDescription(desc)
+                      .setRequired(!!opt.required),
+                  );
+                  break;
+                case "role":
+                  builder.addRoleOption((option) =>
+                    option
+                      .setName(opt.name)
+                      .setDescription(desc)
+                      .setRequired(!!opt.required),
+                  );
+                  break;
+                case "mentionable":
+                  builder.addMentionableOption((option) =>
+                    option
+                      .setName(opt.name)
+                      .setDescription(desc)
+                      .setRequired(!!opt.required),
+                  );
+                  break;
+                case "attachment":
+                  builder.addAttachmentOption((option) =>
+                    option
+                      .setName(opt.name)
+                      .setDescription(desc)
+                      .setRequired(!!opt.required),
+                  );
+                  break;
+                default:
+                  break;
+              }
+            }
+          }
+
+          return builder.toJSON();
         });
 
       for (const guild of this.Client.guilds.cache.values()) {
@@ -143,5 +268,31 @@ export class Command {
 
   public getCommand(name: string): CommandMeta | undefined {
     return this.commands.find((cmd) => cmd.name === name);
+  }
+
+  public unload(name: string): boolean {
+    const index = this.commands.findIndex((cmd) => cmd.name === name);
+    if (index === -1) return false;
+    this.commands.splice(index, 1);
+    Logger.log(`✅️ Command ${name} unloaded successfully.`, "info");
+    return true;
+  }
+
+  public unloadAll(): void {
+    this.commands = [];
+    Logger.log("✅️ All commands unloaded successfully.", "info");
+  }
+
+  public reload(name: string): boolean {
+    const command = this.getCommand(name);
+    if (!command) {
+      Logger.log(`Command ${name} not found.`, "warn");
+      return false;
+    }
+    this.unload(name);
+    this.load().then(() => {
+      Logger.log(`✅️ Command ${name} reloaded successfully.`, "info");
+    });
+    return true;
   }
 }
