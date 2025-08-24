@@ -18,6 +18,11 @@ export const defaultConfig: ConfigType = {
     db: {
       type: "sqlite",
       file: "database/bot.db",
+      host: "localhost",
+      port: 3306,
+      user: "root",
+      password: "",
+      database: "botmanager",
     },
     feature: {
       command_autoload: true,

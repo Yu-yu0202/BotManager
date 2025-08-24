@@ -32,7 +32,7 @@ export class BotManager {
 
     if (configData.options?.log?.logLevel === ("verbose" as const)) {
       this.client.on("debug", (info: string) => {
-        Logger.log(`Client Debug: ${info}`, "debug");
+        Logger.log(`Client Debug: ${info}`, "verbose");
       });
     }
 

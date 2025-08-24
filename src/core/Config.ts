@@ -34,16 +34,16 @@ export class Config {
     if (config.options?.db?.type === "sqlite" && !config.options?.db?.file) {
       throw new Error("DB file path is required for SQLite.");
     } else if (
-      config.options?.db?.type === "mysql" ||
-      config.options?.db?.type === "postgresql"
+      config.options?.db?.type === "mysql"
     ) {
       if (
         !config.options?.db?.host ||
         !config.options?.db?.port ||
         !config.options?.db?.user ||
-        !config.options?.db?.password
+        !config.options?.db?.password ||
+        !config.options?.db?.database
       ) {
-        const dbFields = ["host", "user", "password"] as const;
+        const dbFields = ["host", "user", "password", "database"] as const;
         const missing = dbFields.filter((f) => !config.options?.db?.[f]);
 
         throw new Error(

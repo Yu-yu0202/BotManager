@@ -12,11 +12,12 @@ import { GatewayIntentBits } from "discord.js";
  * @property {boolean} [options.log.enable_file] - Whether to enable file logging.
  * @property {string} [options.log.file_path] - The file path for logging.
  * @property {Object} [options.db] - Database configuration.
- * @property {('sqlite' | 'mysql' | 'postgresql')} options.db.type - The type of database.
+ * @property {('sqlite' | 'mysql')} options.db.type - The type of database.
  * @property {string} [options.db.host] - The database host.
  * @property {number} [options.db.port] - The database port.
  * @property {string} [options.db.user] - The database user.
  * @property {string} [options.db.password] - The database password.
+ * @property {string} [options.db.database] - The database name for MySQL.
  * @property {string} [options.db.file] - The file path for SQLite database.
  * @property {Object} [options.feature] - Feature configuration.
  * @property {boolean} [options.feature.command_autoload] - Whether to autoload commands.
@@ -58,11 +59,12 @@ export type ConfigType = {
       file_path?: string;
     };
     db?: {
-      type: "sqlite" | "mysql" | "postgresql";
+      type: "sqlite" | "mysql";
       host?: string;
       port?: number;
       user?: string;
       password?: string;
+      database?: string; // for mysql
       file?: string; // for sqlite
     };
     feature?: {

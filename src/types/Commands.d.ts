@@ -1,4 +1,9 @@
-import { Interaction } from "discord.js";
+import {
+  ButtonInteraction,
+  ChatInputCommandInteraction,
+  Interaction,
+  ModalSubmitInteraction,
+} from "discord.js";
 
 /**
  * Bot command metadata type.
@@ -63,7 +68,13 @@ export type CommandMeta = {
   }[];
   autocomplete?(interaction: Interaction): Promise<void>;
   type: "slash" | "Button" | "Modal";
-  exec(interaction: Interaction): Promise<void>;
+  exec(
+    interaction:
+      | Interaction
+      | ChatInputCommandInteraction
+      | ButtonInteraction
+      | ModalSubmitInteraction,
+  ): Promise<void>;
   cooldown?: number;
   adminOnly?: boolean;
   devOnly?: boolean;

@@ -1,7 +1,6 @@
 import { ChatInputCommandInteraction } from "discord.js";
 import type { CommandMeta } from "../../types";
-import { Command } from "../../core";
-import { Logger } from "../../core";
+import { Command, Logger } from "../../core/index.js";
 
 export class HotSwap implements CommandMeta {
   public name: string = "hotswap";

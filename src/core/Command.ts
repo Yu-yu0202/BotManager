@@ -20,13 +20,14 @@ export class Command {
   }
 
   public async load(): Promise<AllReadonly<CommandMeta[]>> {
-    return new Promise(async (resolve, _reject) => {
+    try {
       Logger.log("Loading commands...", "info");
+      
       const __filename = fileURLToPath(import.meta.url);
       const __dirname = path.dirname(__filename);
       const libRoot = path.resolve(__dirname, "..", "..");
       const appRoot = process.cwd();
-
+  
       const candidateDirs = [
         path.resolve(appRoot, "commands"),
         path.resolve(appRoot, "dist", "commands"),
@@ -35,17 +36,16 @@ export class Command {
         path.resolve(libRoot, "dist", "commands"),
         path.resolve(libRoot, "src", "commands"),
       ];
-
+  
       const commandsDir = candidateDirs.find((d) => fs.existsSync(d));
       if (!commandsDir) {
         Logger.log(
           "Command directory does not exist. Skipping command load.",
           "warn",
         );
-        resolve(this.commands.slice() as AllReadonly<CommandMeta[]>);
-        return;
+        return this.commands.slice() as AllReadonly<CommandMeta[]>;
       }
-
+  
       const useJs = commandsDir.includes(`${path.sep}dist${path.sep}`);
       const files = fs
         .readdirSync(commandsDir, { withFileTypes: true })
@@ -56,211 +56,329 @@ export class Command {
           return true;
         })
         .map((f) => f.name);
-
+  
+      const config = Config.get();
+      const enableDev = !!config?.options?.feature?.enable_dev_commands;
+      const enableAdmin = !!config?.options?.feature?.enable_admin_commands;
+  
+      if (enableDev) {
+        await this.loadHotswapCommand();
+      }
+  
       for (const file of files) {
-        Logger.log(`processing ${file}`, "debug");
-        const modulePath = path.resolve(commandsDir, file);
-        const module = await import(pathToFileURL(modulePath).href);
-        let found: boolean = false;
-        for (const key of Object.keys(module)) {
-          const exported = module[key];
-          if (
-            typeof exported === "function" &&
-            /^class\s/.test(Function.prototype.toString.call(exported))
-          ) {
-            let instance;
-            try {
-              instance = new exported();
-            } catch (e) {
-              Logger.log(
-                `Failed to instantiate command class in ${file}: ${
-                  e instanceof Error ? e.message : "Unknown error"
-                }`,
-                "warn",
-              );
-              continue;
-            }
-            if (
-              instance &&
-              typeof instance.name === "string" &&
-              typeof instance.description === "string" &&
-              typeof instance.exec === "function" &&
-              typeof instance.type === "string" &&
-              ((Config.get()!["options"]!["feature"]!["enable_dev_commands"]! &&
-                instance.devOnly) ||
-                !instance.devOnly) &&
-              ((Config.get()!["options"]!["feature"]![
-                "enable_admin_commands"
-              ]! &&
-                instance.adminOnly) ||
-                !instance.adminOnly)
-            ) {
-              const existingIndex = this.commands.findIndex(
-                (cmd) => cmd.name === instance.name,
-              );
-              if (existingIndex !== -1) {
-                this.commands[existingIndex] = instance as CommandMeta;
-                Logger.log(
-                  `[Command.load()] ♻️ Command ${instance.name} reloaded (overwritten).`,
-                  "warn",
-                );
-              } else {
-                this.commands.push(instance as CommandMeta);
-                Logger.log(
-                  `✅️ Command ${instance.name} loaded successfully.`,
-                  "info",
-                );
-              }
-              found = true;
-            }
-          }
+        if (enableDev && file.toLowerCase().includes("hotswap")) {
+          continue;
         }
-        if (!found) {
-          Logger.log(
-            `No class implementing CommandMeta found in command file ${file}.`,
-            "warn",
-          );
-        }
+        await this.loadCommandFromFile(file, commandsDir, enableDev, enableAdmin);
       }
-
+  
       Logger.log(`Loaded ${this.commands.length} commands.`, "info");
-
-      const meta: ApplicationCommandDataResolvable[] = this.commands
-        .filter((cmd) => cmd.type === "slash")
-        .map((cmd) => {
-          const builder = new SlashCommandBuilder()
-            .setName(cmd.name)
-            .setDescription(cmd.description);
-
-          if (Array.isArray(cmd.options)) {
-            for (const opt of cmd.options) {
-              if (
-                !opt ||
-                typeof opt !== "object" ||
-                !opt.name ||
-                typeof opt.name !== "string" ||
-                !opt.type
-              )
-                continue;
-              const desc =
-                typeof opt.description === "string"
-                  ? opt.description
-                  : "No description";
-              switch (opt.type) {
-                case "string":
-                  builder.addStringOption((option) => {
-                    let o = option
-                      .setName(opt.name)
-                      .setDescription(desc)
-                      .setRequired(!!opt.required);
-                    if (Array.isArray(opt.choices)) {
-                      o = o.setChoices(
-                        ...opt.choices.map((c: any) =>
-                          typeof c === "object" && c.name && c.value
-                            ? { name: c.name, value: c.value }
-                            : { name: String(c), value: c },
-                        ),
-                      );
-                    }
-                    return o;
-                  });
-                  break;
-                case "number":
-                  builder.addNumberOption((option) => {
-                    let o = option
-                      .setName(opt.name)
-                      .setDescription(desc)
-                      .setRequired(!!opt.required);
-                    if (Array.isArray(opt.choices)) {
-                      o = o.setChoices(
-                        ...opt.choices!.map((c: any) =>
-                          typeof c === "object" && c.name && c.value
-                            ? { name: c.name, value: c.value }
-                            : { name: String(c), value: c },
-                        ),
-                      );
-                    }
-                    return o;
-                  });
-                  break;
-                case "boolean":
-                  builder.addBooleanOption((option) =>
-                    option
-                      .setName(opt.name)
-                      .setDescription(desc)
-                      .setRequired(!!opt.required),
-                  );
-                  break;
-                case "user":
-                  builder.addUserOption((option) =>
-                    option
-                      .setName(opt.name)
-                      .setDescription(desc)
-                      .setRequired(!!opt.required),
-                  );
-                  break;
-                case "channel":
-                  builder.addChannelOption((option) =>
-                    option
-                      .setName(opt.name)
-                      .setDescription(desc)
-                      .setRequired(!!opt.required),
-                  );
-                  break;
-                case "role":
-                  builder.addRoleOption((option) =>
-                    option
-                      .setName(opt.name)
-                      .setDescription(desc)
-                      .setRequired(!!opt.required),
-                  );
-                  break;
-                case "mentionable":
-                  builder.addMentionableOption((option) =>
-                    option
-                      .setName(opt.name)
-                      .setDescription(desc)
-                      .setRequired(!!opt.required),
-                  );
-                  break;
-                case "attachment":
-                  builder.addAttachmentOption((option) =>
-                    option
-                      .setName(opt.name)
-                      .setDescription(desc)
-                      .setRequired(!!opt.required),
-                  );
-                  break;
-                default:
-                  break;
-              }
-            }
+  
+      await this.registerSlashCommands();
+  
+      return this.commands.slice() as AllReadonly<CommandMeta[]>;
+    } catch (error) {
+      Logger.log(
+        `Critical error during command loading: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        "error",
+      );
+      return this.commands.slice() as AllReadonly<CommandMeta[]>;
+    }
+  }
+  
+  private async loadHotswapCommand(): Promise<void> {
+    try {
+      const hotswapPath = path.resolve(__dirname, "../include/command/Hotswap.js");
+      const HotSwapModule = await import(pathToFileURL(hotswapPath).href);
+      const HotSwapClass = HotSwapModule.default || HotSwapModule;
+      
+      if (!HotSwapClass) {
+        Logger.log("Hotswap class not found in module", "warn");
+        return;
+      }
+  
+      const instance = new HotSwapClass();
+      if (this.isValidCommandInstance(instance)) {
+        this.addOrUpdateCommand(instance);
+      }
+    } catch (error) {
+      Logger.log(
+        `Failed to load Hotswap command: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        "warn",
+      );
+    }
+  }
+  
+  private async loadCommandFromFile(
+    file: string,
+    commandsDir: string,
+    enableDev: boolean,
+    enableAdmin: boolean,
+  ): Promise<void> {
+    try {
+      Logger.log(`Processing ${file}`, "debug");
+      const modulePath = path.resolve(commandsDir, file);
+      const module = await import(pathToFileURL(modulePath).href);
+      
+      let found = false;
+      for (const key of Object.keys(module)) {
+        const exported = module[key];
+        if (this.isClassConstructor(exported)) {
+          const instance = await this.createCommandInstance(exported, file);
+          if (instance && this.shouldLoadCommand(instance, enableDev, enableAdmin)) {
+            this.addOrUpdateCommand(instance);
+            found = true;
           }
-
-          return builder.toJSON();
-        });
-
-      for (const guild of this.Client.guilds.cache.values()) {
-        const guildId = guild.id;
-        Logger.log(`Registering commands for guild: ${guildId}`, "info");
-        try {
-          await guild.commands.set(meta);
-          Logger.log(
-            `✅️ Commands registered successfully for guild: ${guildId}`,
-            "info",
-          );
-        } catch (error) {
-          Logger.log(
-            `Failed to register commands for guild ${guildId}: ${
-              error instanceof Error ? error.message : "Unknown error"
-            }`,
-            "error",
-          );
         }
       }
-
-      resolve(this.commands.slice() as AllReadonly<CommandMeta[]>);
+      
+      if (!found) {
+        Logger.log(
+          `No valid command class found in ${file}`,
+          "warn",
+        );
+      }
+    } catch (error) {
+      Logger.log(
+        `Failed to load command file ${file}: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        "warn",
+      );
+    }
+  }
+  
+  private isClassConstructor(exported: any): boolean {
+    return (
+      typeof exported === "function" &&
+      /^class\s/.test(Function.prototype.toString.call(exported))
+    );
+  }
+  
+  private async createCommandInstance(
+    CommandClass: any,
+    file: string,
+  ): Promise<any> {
+    try {
+      return new CommandClass();
+    } catch (error) {
+      Logger.log(
+        `Failed to instantiate command class in ${file}: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        "warn",
+      );
+      return null;
+    }
+  }
+  
+  private isValidCommandInstance(instance: any): boolean {
+    return (
+      instance &&
+      typeof instance.name === "string" &&
+      typeof instance.description === "string" &&
+      typeof instance.exec === "function" &&
+      typeof instance.type === "string"
+    );
+  }
+  
+  private shouldLoadCommand(
+    instance: any,
+    enableDev: boolean,
+    enableAdmin: boolean,
+  ): boolean {
+    if (!this.isValidCommandInstance(instance)) {
+      return false;
+    }
+    
+    if (instance.devOnly && !enableDev) {
+      return false;
+    }
+    
+    if (instance.adminOnly && !enableAdmin) {
+      return false;
+    }
+    
+    return true;
+  }
+  
+  private addOrUpdateCommand(instance: CommandMeta): void {
+    const existingIndex = this.commands.findIndex(
+      (cmd) => cmd.name === instance.name,
+    );
+    
+    if (existingIndex !== -1) {
+      this.commands[existingIndex] = instance;
+      Logger.log(
+        `♻️ Command ${instance.name} reloaded (overwritten).`,
+        "warn",
+      );
+    } else {
+      this.commands.push(instance);
+      Logger.log(
+        `✅ Command ${instance.name} loaded successfully.`,
+        "info",
+      );
+    }
+  }
+  
+  private async registerSlashCommands(): Promise<void> {
+    const slashCommands = this.commands.filter((cmd) => cmd.type === "slash");
+    const meta: ApplicationCommandDataResolvable[] = slashCommands.map((cmd) =>
+      this.buildSlashCommandMeta(cmd)
+    );
+  
+    const guilds = Array.from(this.Client.guilds.cache.values());
+    const registrationPromises = guilds.map(async (guild) => {
+      try {
+        Logger.log(`Registering commands for guild: ${guild.id}`, "info");
+        await guild.commands.set(meta);
+        Logger.log(
+          `✅ Commands registered successfully for guild: ${guild.id}`,
+          "info",
+        );
+      } catch (error) {
+        Logger.log(
+          `Failed to register commands for guild ${guild.id}: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+          "error",
+        );
+      }
     });
+  
+    await Promise.allSettled(registrationPromises);
+  }
+  
+  private buildSlashCommandMeta(cmd: CommandMeta): ApplicationCommandDataResolvable {
+    const builder = new SlashCommandBuilder()
+      .setName(cmd.name)
+      .setDescription(cmd.description);
+  
+    if (Array.isArray(cmd.options)) {
+      for (const opt of cmd.options) {
+        if (!this.isValidOption(opt)) continue;
+        
+        const desc = typeof opt.description === "string" ? opt.description : "No description";
+        this.addOptionToBuilder(builder, opt, desc);
+      }
+    }
+  
+    return builder.toJSON();
+  }
+  
+  private isValidOption(opt: any): boolean {
+    return (
+      opt &&
+      typeof opt === "object" &&
+      opt.name &&
+      typeof opt.name === "string" &&
+      opt.type
+    );
+  }
+  
+  private addOptionToBuilder(
+    builder: SlashCommandBuilder,
+    opt: any,
+    description: string,
+  ): void {
+    const baseConfig = {
+      name: opt.name,
+      description,
+      required: !!opt.required,
+    };
+  
+    switch (opt.type) {
+      case "string":
+        builder.addStringOption((option) => {
+          let o = option
+            .setName(baseConfig.name)
+            .setDescription(baseConfig.description)
+            .setRequired(baseConfig.required);
+          
+          if (Array.isArray(opt.choices)) {
+            o = o.setChoices(...this.formatChoices(opt.choices));
+          }
+          return o;
+        });
+        break;
+      case "number":
+        builder.addNumberOption((option) => {
+          let o = option
+            .setName(baseConfig.name)
+            .setDescription(baseConfig.description)
+            .setRequired(baseConfig.required);
+          
+          if (Array.isArray(opt.choices)) {
+            o = o.setChoices(...this.formatChoices(opt.choices));
+          }
+          return o;
+        });
+        break;
+      case "boolean":
+        builder.addBooleanOption((option) =>
+          option
+            .setName(baseConfig.name)
+            .setDescription(baseConfig.description)
+            .setRequired(baseConfig.required),
+        );
+        break;
+      case "user":
+        builder.addUserOption((option) =>
+          option
+            .setName(baseConfig.name)
+            .setDescription(baseConfig.description)
+            .setRequired(baseConfig.required),
+        );
+        break;
+      case "channel":
+        builder.addChannelOption((option) =>
+          option
+            .setName(baseConfig.name)
+            .setDescription(baseConfig.description)
+            .setRequired(baseConfig.required),
+        );
+        break;
+      case "role":
+        builder.addRoleOption((option) =>
+          option
+            .setName(baseConfig.name)
+            .setDescription(baseConfig.description)
+            .setRequired(baseConfig.required),
+        );
+        break;
+      case "mentionable":
+        builder.addMentionableOption((option) =>
+          option
+            .setName(baseConfig.name)
+            .setDescription(baseConfig.description)
+            .setRequired(baseConfig.required),
+        );
+        break;
+      case "attachment":
+        builder.addAttachmentOption((option) =>
+          option
+            .setName(baseConfig.name)
+            .setDescription(baseConfig.description)
+            .setRequired(baseConfig.required),
+        );
+        break;
+      default:
+        Logger.log(`Unknown option type: ${opt.type}`, "warn");
+        break;
+    }
+  }
+  
+  private formatChoices(choices: any[]): Array<{ name: string; value: any }> {
+    return choices.map((c: any) =>
+      typeof c === "object" && c.name && c.value
+        ? { name: c.name, value: c.value }
+        : { name: String(c), value: c },
+    );
   }
 
   public get(): AllReadonly<CommandMeta[]> {
