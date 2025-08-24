@@ -33,9 +33,7 @@ export class Config {
 
     if (config.options?.db?.type === "sqlite" && !config.options?.db?.file) {
       throw new Error("DB file path is required for SQLite.");
-    } else if (
-      config.options?.db?.type === "mysql"
-    ) {
+    } else if (config.options?.db?.type === "mysql") {
       if (
         !config.options?.db?.host ||
         !config.options?.db?.port ||

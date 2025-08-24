@@ -15,7 +15,10 @@ export class Database {
     } else {
       throw new Error("Invalid database type");
     }
-    Logger.log("✅️ Database connection has been successfully established.", 'info');
+    Logger.log(
+      "✅️ Database connection has been successfully established.",
+      "info",
+    );
   }
 
   private async initializeMySQL(): Promise<void> {
@@ -35,10 +38,10 @@ export class Database {
 
   public async query<T = Record<string, any>>(
     sql: string,
-    params?: any[]
+    params?: any[],
   ): Promise<T[]> {
     await this.ensureReady();
-    
+
     if (this.dbconfig.type === "sqlite") {
       return (this.db as SQLite).query<T>(sql, params);
     } else {
@@ -48,10 +51,10 @@ export class Database {
 
   public async get<T = Record<string, any>>(
     sql: string,
-    params?: any[]
+    params?: any[],
   ): Promise<T | undefined> {
     await this.ensureReady();
-    
+
     if (this.dbconfig.type === "sqlite") {
       return (this.db as SQLite).get<T>(sql, params);
     } else {
@@ -59,12 +62,9 @@ export class Database {
     }
   }
 
-  public async run(
-    sql: string,
-    params?: any[]
-  ): Promise<any> {
+  public async run(sql: string, params?: any[]): Promise<any> {
     await this.ensureReady();
-    
+
     if (this.dbconfig.type === "sqlite") {
       return (this.db as SQLite).run(sql, params);
     } else {
@@ -83,7 +83,7 @@ export class Database {
 
   public async commit(): Promise<this> {
     await this.ensureReady();
-    
+
     if (this.dbconfig.type === "sqlite") {
       (this.db as SQLite).commit();
     } else {
@@ -94,7 +94,7 @@ export class Database {
 
   public async rollback(): Promise<void> {
     await this.ensureReady();
-    
+
     if (this.dbconfig.type === "sqlite") {
       (this.db as SQLite).rollback();
     } else {
@@ -104,7 +104,7 @@ export class Database {
 
   public async savepoint(name?: string): Promise<string> {
     await this.ensureReady();
-    
+
     if (this.dbconfig.type === "sqlite") {
       return (this.db as SQLite).savepoint(name);
     } else {
@@ -114,7 +114,7 @@ export class Database {
 
   public async releaseSavepoint(name: string): Promise<void> {
     await this.ensureReady();
-    
+
     if (this.dbconfig.type === "sqlite") {
       (this.db as SQLite).releaseSavepoint(name);
     } else {
@@ -124,7 +124,7 @@ export class Database {
 
   public async rollbackToSavepoint(name: string): Promise<void> {
     await this.ensureReady();
-    
+
     if (this.dbconfig.type === "sqlite") {
       (this.db as SQLite).rollbackToSavepoint(name);
     } else {
@@ -134,7 +134,7 @@ export class Database {
 
   public async tableExists(tableName: string): Promise<boolean> {
     await this.ensureReady();
-    
+
     if (this.dbconfig.type === "sqlite") {
       return (this.db as SQLite).tableExists(tableName);
     } else {

@@ -6,29 +6,36 @@ export class MySQL {
   private connection: mysql.Connection | null = null;
   private pool: mysql.Pool | null = null;
   private uncommitted: { sql: string; params?: any[] }[] = [];
-  private preparedStatements: Map<string, mysql.PreparedStatementInfo> = new Map();
+  private preparedStatements: Map<string, mysql.PreparedStatementInfo> =
+    new Map();
   private savepointCounter = 0;
   private isTransactionActive = false;
 
   private constructor() {}
 
-  public static async createConnection(config?: mysql.ConnectionOptions): Promise<MySQL> {
+  public static async createConnection(
+    config?: mysql.ConnectionOptions,
+  ): Promise<MySQL> {
     const instance = new MySQL();
-    
+
     if (config) {
       instance.connection = await mysql.createConnection(config);
     } else {
       // Config.get()からMySQL設定を取得
       const configData = Config.get();
       if (configData.options?.db?.type !== "mysql") {
-        throw new Error("MySQL is not configured in config. Set options.db.type to 'mysql'");
+        throw new Error(
+          "MySQL is not configured in config. Set options.db.type to 'mysql'",
+        );
       }
-      
+
       const dbConfig = configData.options.db;
       if (!dbConfig.host || !dbConfig.user || !dbConfig.password) {
-        throw new Error("MySQL configuration is incomplete. Missing host, user, or password");
+        throw new Error(
+          "MySQL configuration is incomplete. Missing host, user, or password",
+        );
       }
-      
+
       const connectionConfig: mysql.ConnectionOptions = {
         host: dbConfig.host,
         port: dbConfig.port || 3306,
@@ -36,30 +43,34 @@ export class MySQL {
         password: dbConfig.password,
         database: dbConfig.database,
       };
-      
+
       instance.connection = await mysql.createConnection(connectionConfig);
     }
-    
+
     return instance;
   }
 
   public static async createPool(config?: mysql.PoolOptions): Promise<MySQL> {
     const instance = new MySQL();
-    
+
     if (config) {
       instance.pool = mysql.createPool(config);
     } else {
       // Config.get()からMySQL設定を取得
       const configData = Config.get();
       if (configData.options?.db?.type !== "mysql") {
-        throw new Error("MySQL is not configured in config. Set options.db.type to 'mysql'");
+        throw new Error(
+          "MySQL is not configured in config. Set options.db.type to 'mysql'",
+        );
       }
-      
+
       const dbConfig = configData.options.db;
       if (!dbConfig.host || !dbConfig.user || !dbConfig.password) {
-        throw new Error("MySQL configuration is incomplete. Missing host, user, or password");
+        throw new Error(
+          "MySQL configuration is incomplete. Missing host, user, or password",
+        );
       }
-      
+
       const poolConfig: mysql.PoolOptions = {
         host: dbConfig.host,
         port: dbConfig.port || 3306,
@@ -70,10 +81,10 @@ export class MySQL {
         connectionLimit: 10,
         queueLimit: 0,
       };
-      
+
       instance.pool = mysql.createPool(poolConfig);
     }
-    
+
     return instance;
   }
 
@@ -98,7 +109,7 @@ export class MySQL {
     }
 
     const connection = await this.getConnection();
-    
+
     try {
       if (!this.isTransactionActive) {
         await connection.beginTransaction();
@@ -129,7 +140,9 @@ export class MySQL {
     return this;
   }
 
-  private async getPreparedStatement(sql: string): Promise<mysql.PreparedStatementInfo> {
+  private async getPreparedStatement(
+    sql: string,
+  ): Promise<mysql.PreparedStatementInfo> {
     if (!this.preparedStatements.has(sql)) {
       const connection = await this.getConnection();
       const stmt = await connection.prepare(sql);
@@ -195,12 +208,12 @@ export class MySQL {
 
   public async close(): Promise<void> {
     this.preparedStatements.clear();
-    
+
     if (this.connection) {
       await this.connection.end();
       this.connection = null;
     }
-    
+
     if (this.pool) {
       await this.pool.end();
       this.pool = null;

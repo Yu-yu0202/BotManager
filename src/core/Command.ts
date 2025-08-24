@@ -22,12 +22,12 @@ export class Command {
   public async load(): Promise<AllReadonly<CommandMeta[]>> {
     try {
       Logger.log("Loading commands...", "info");
-      
+
       const __filename = fileURLToPath(import.meta.url);
       const __dirname = path.dirname(__filename);
       const libRoot = path.resolve(__dirname, "..", "..");
       const appRoot = process.cwd();
-  
+
       const candidateDirs = [
         path.resolve(appRoot, "commands"),
         path.resolve(appRoot, "dist", "commands"),
@@ -36,7 +36,7 @@ export class Command {
         path.resolve(libRoot, "dist", "commands"),
         path.resolve(libRoot, "src", "commands"),
       ];
-  
+
       const commandsDir = candidateDirs.find((d) => fs.existsSync(d));
       if (!commandsDir) {
         Logger.log(
@@ -45,7 +45,7 @@ export class Command {
         );
         return this.commands.slice() as AllReadonly<CommandMeta[]>;
       }
-  
+
       const useJs = commandsDir.includes(`${path.sep}dist${path.sep}`);
       const files = fs
         .readdirSync(commandsDir, { withFileTypes: true })
@@ -56,26 +56,31 @@ export class Command {
           return true;
         })
         .map((f) => f.name);
-  
+
       const config = Config.get();
       const enableDev = !!config?.options?.feature?.enable_dev_commands;
       const enableAdmin = !!config?.options?.feature?.enable_admin_commands;
-  
+
       if (enableDev) {
         await this.loadHotswapCommand();
       }
-  
+
       for (const file of files) {
         if (enableDev && file.toLowerCase().includes("hotswap")) {
           continue;
         }
-        await this.loadCommandFromFile(file, commandsDir, enableDev, enableAdmin);
+        await this.loadCommandFromFile(
+          file,
+          commandsDir,
+          enableDev,
+          enableAdmin,
+        );
       }
-  
+
       Logger.log(`Loaded ${this.commands.length} commands.`, "info");
-  
+
       await this.registerSlashCommands();
-  
+
       return this.commands.slice() as AllReadonly<CommandMeta[]>;
     } catch (error) {
       Logger.log(
@@ -87,18 +92,21 @@ export class Command {
       return this.commands.slice() as AllReadonly<CommandMeta[]>;
     }
   }
-  
+
   private async loadHotswapCommand(): Promise<void> {
     try {
-      const hotswapPath = path.resolve(__dirname, "../include/command/Hotswap.js");
+      const hotswapPath = path.resolve(
+        __dirname,
+        "../include/command/Hotswap.js",
+      );
       const HotSwapModule = await import(pathToFileURL(hotswapPath).href);
       const HotSwapClass = HotSwapModule.default || HotSwapModule;
-      
+
       if (!HotSwapClass) {
         Logger.log("Hotswap class not found in module", "warn");
         return;
       }
-  
+
       const instance = new HotSwapClass();
       if (this.isValidCommandInstance(instance)) {
         this.addOrUpdateCommand(instance);
@@ -112,7 +120,7 @@ export class Command {
       );
     }
   }
-  
+
   private async loadCommandFromFile(
     file: string,
     commandsDir: string,
@@ -123,24 +131,24 @@ export class Command {
       Logger.log(`Processing ${file}`, "debug");
       const modulePath = path.resolve(commandsDir, file);
       const module = await import(pathToFileURL(modulePath).href);
-      
+
       let found = false;
       for (const key of Object.keys(module)) {
         const exported = module[key];
         if (this.isClassConstructor(exported)) {
           const instance = await this.createCommandInstance(exported, file);
-          if (instance && this.shouldLoadCommand(instance, enableDev, enableAdmin)) {
+          if (
+            instance &&
+            this.shouldLoadCommand(instance, enableDev, enableAdmin)
+          ) {
             this.addOrUpdateCommand(instance);
             found = true;
           }
         }
       }
-      
+
       if (!found) {
-        Logger.log(
-          `No valid command class found in ${file}`,
-          "warn",
-        );
+        Logger.log(`No valid command class found in ${file}`, "warn");
       }
     } catch (error) {
       Logger.log(
@@ -151,14 +159,14 @@ export class Command {
       );
     }
   }
-  
+
   private isClassConstructor(exported: any): boolean {
     return (
       typeof exported === "function" &&
       /^class\s/.test(Function.prototype.toString.call(exported))
     );
   }
-  
+
   private async createCommandInstance(
     CommandClass: any,
     file: string,
@@ -175,7 +183,7 @@ export class Command {
       return null;
     }
   }
-  
+
   private isValidCommandInstance(instance: any): boolean {
     return (
       instance &&
@@ -185,7 +193,7 @@ export class Command {
       typeof instance.type === "string"
     );
   }
-  
+
   private shouldLoadCommand(
     instance: any,
     enableDev: boolean,
@@ -194,44 +202,38 @@ export class Command {
     if (!this.isValidCommandInstance(instance)) {
       return false;
     }
-    
+
     if (instance.devOnly && !enableDev) {
       return false;
     }
-    
+
     if (instance.adminOnly && !enableAdmin) {
       return false;
     }
-    
+
     return true;
   }
-  
+
   private addOrUpdateCommand(instance: CommandMeta): void {
     const existingIndex = this.commands.findIndex(
       (cmd) => cmd.name === instance.name,
     );
-    
+
     if (existingIndex !== -1) {
       this.commands[existingIndex] = instance;
-      Logger.log(
-        `♻️ Command ${instance.name} reloaded (overwritten).`,
-        "warn",
-      );
+      Logger.log(`♻️ Command ${instance.name} reloaded (overwritten).`, "warn");
     } else {
       this.commands.push(instance);
-      Logger.log(
-        `✅ Command ${instance.name} loaded successfully.`,
-        "info",
-      );
+      Logger.log(`✅ Command ${instance.name} loaded successfully.`, "info");
     }
   }
-  
+
   private async registerSlashCommands(): Promise<void> {
     const slashCommands = this.commands.filter((cmd) => cmd.type === "slash");
     const meta: ApplicationCommandDataResolvable[] = slashCommands.map((cmd) =>
-      this.buildSlashCommandMeta(cmd)
+      this.buildSlashCommandMeta(cmd),
     );
-  
+
     const guilds = Array.from(this.Client.guilds.cache.values());
     const registrationPromises = guilds.map(async (guild) => {
       try {
@@ -250,27 +252,32 @@ export class Command {
         );
       }
     });
-  
+
     await Promise.allSettled(registrationPromises);
   }
-  
-  private buildSlashCommandMeta(cmd: CommandMeta): ApplicationCommandDataResolvable {
+
+  private buildSlashCommandMeta(
+    cmd: CommandMeta,
+  ): ApplicationCommandDataResolvable {
     const builder = new SlashCommandBuilder()
       .setName(cmd.name)
       .setDescription(cmd.description);
-  
+
     if (Array.isArray(cmd.options)) {
       for (const opt of cmd.options) {
         if (!this.isValidOption(opt)) continue;
-        
-        const desc = typeof opt.description === "string" ? opt.description : "No description";
+
+        const desc =
+          typeof opt.description === "string"
+            ? opt.description
+            : "No description";
         this.addOptionToBuilder(builder, opt, desc);
       }
     }
-  
+
     return builder.toJSON();
   }
-  
+
   private isValidOption(opt: any): boolean {
     return (
       opt &&
@@ -280,7 +287,7 @@ export class Command {
       opt.type
     );
   }
-  
+
   private addOptionToBuilder(
     builder: SlashCommandBuilder,
     opt: any,
@@ -291,7 +298,7 @@ export class Command {
       description,
       required: !!opt.required,
     };
-  
+
     switch (opt.type) {
       case "string":
         builder.addStringOption((option) => {
@@ -299,7 +306,7 @@ export class Command {
             .setName(baseConfig.name)
             .setDescription(baseConfig.description)
             .setRequired(baseConfig.required);
-          
+
           if (Array.isArray(opt.choices)) {
             o = o.setChoices(...this.formatChoices(opt.choices));
           }
@@ -312,7 +319,7 @@ export class Command {
             .setName(baseConfig.name)
             .setDescription(baseConfig.description)
             .setRequired(baseConfig.required);
-          
+
           if (Array.isArray(opt.choices)) {
             o = o.setChoices(...this.formatChoices(opt.choices));
           }
@@ -372,7 +379,7 @@ export class Command {
         break;
     }
   }
-  
+
   private formatChoices(choices: any[]): Array<{ name: string; value: any }> {
     return choices.map((c: any) =>
       typeof c === "object" && c.name && c.value
