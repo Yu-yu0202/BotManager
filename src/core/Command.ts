@@ -235,13 +235,40 @@ export class Command {
     );
     if (!CommandInfo) return false;
 
-    const cfg = Config.get();
-    const admins: readonly string[] | undefined = cfg.options?.adminuserid;
-    if (user && Array.isArray(admins) && admins.includes(user)) return true;
-
     if (!CommandInfo.cooldown || CommandInfo.cooldown <= 0) return true;
 
     const isGlobal = !!(CommandInfo.isglobalcooldown ?? false);
+
+    const cfg = Config.get();
+    const admins: readonly string[] | undefined = cfg.options?.adminuserid;
+    const isAdminUser = !!(
+      user &&
+      Array.isArray(admins) &&
+      admins.includes(user)
+    );
+
+    if (isAdminUser) {
+      const now = Date.now();
+      if (isGlobal) {
+        const entry = this.cooldown.find(
+          (c) => c.commandName === CN && c.global === true,
+        );
+        if (!entry) {
+          this.cooldown.push({
+            commandName: CN,
+            global: true,
+            user: undefined,
+            seconds: CommandInfo.cooldown,
+            lastUsed: new Date(now).toISOString(),
+          });
+        } else {
+          entry.seconds = CommandInfo.cooldown;
+          entry.lastUsed = new Date(now).toISOString();
+        }
+      }
+      return true;
+    }
+
     if (!isGlobal && !user) return true;
 
     const now = Date.now();

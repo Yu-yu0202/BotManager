@@ -80,6 +80,9 @@ export class BotManager {
                 await interaction
                   .reply?.({ embeds: [embed], ephemeral: true })
                   .catch(() => {});
+                setTimeout(async () => {
+                  await interaction.deleteReply();
+                }, 3000);
                 return;
               }
               if (
@@ -96,6 +99,9 @@ export class BotManager {
                   .setColor("Aqua")
                   .setTimestamp();
                 await interaction.reply?.({ embeds: [embed] }).catch(() => {});
+                setTimeout(async () => {
+                  await interaction.deleteReply();
+                }, 3000);
                 return;
               }
               await command.exec(interaction);
@@ -145,6 +151,9 @@ export class BotManager {
               await interaction
                 .reply?.({ embeds: [embed], ephemeral: true })
                 .catch(() => {});
+              setTimeout(async () => {
+                await interaction.deleteReply();
+              }, 3000);
               return;
             }
             if (
@@ -161,6 +170,9 @@ export class BotManager {
                 .setColor("Aqua")
                 .setTimestamp();
               await interaction.reply?.({ embeds: [embed] }).catch(() => {});
+              setTimeout(async () => {
+                await interaction.deleteReply();
+              }, 3000);
               return;
             }
             await button.exec(interaction);
@@ -192,6 +204,9 @@ export class BotManager {
               await interaction
                 .reply?.({ embeds: [embed], ephemeral: true })
                 .catch(() => {});
+              setTimeout(async () => {
+                await interaction.deleteReply();
+              }, 3000);
               return;
             }
             if (
@@ -208,6 +223,9 @@ export class BotManager {
                 .setColor("Aqua")
                 .setTimestamp();
               await interaction.reply?.({ embeds: [embed] }).catch(() => {});
+              setTimeout(async () => {
+                await interaction.deleteReply();
+              }, 3000);
               return;
             }
             await modal.exec(interaction);
