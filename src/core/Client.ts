@@ -7,6 +7,21 @@ import { Event } from "./Event.js";
 import { Command } from "./Command.js";
 import { Core } from "./index.js";
 
+// Simple memory-safe reply deletion queue to avoid piling up timers
+const deleteQueue: { interaction: any; at: number }[] = [];
+function scheduleDelete(interaction: any, delayMs: number): void {
+  deleteQueue.push({ interaction, at: Date.now() + delayMs });
+}
+setInterval(() => {
+  const now = Date.now();
+  for (let i = deleteQueue.length - 1; i >= 0; i--) {
+    if (deleteQueue[i].at <= now) {
+      const { interaction } = deleteQueue.splice(i, 1)[0];
+      interaction?.deleteReply?.().catch(() => {});
+    }
+  }
+}, 500);
+
 export class BotManager {
   private static client: Client | undefined = undefined;
 
@@ -80,9 +95,7 @@ export class BotManager {
                 await interaction
                   .reply?.({ embeds: [embed], ephemeral: true })
                   .catch(() => {});
-                setTimeout(async () => {
-                  await interaction.deleteReply();
-                }, 3000);
+                scheduleDelete(interaction, 3000);
                 return;
               }
               if (
@@ -99,9 +112,7 @@ export class BotManager {
                   .setColor("Aqua")
                   .setTimestamp();
                 await interaction.reply?.({ embeds: [embed] }).catch(() => {});
-                setTimeout(async () => {
-                  await interaction.deleteReply();
-                }, 3000);
+                scheduleDelete(interaction, 3000);
                 return;
               }
               await command.exec(interaction);
@@ -148,12 +159,8 @@ export class BotManager {
                 .setDescription("このボタン操作は管理者専用です。")
                 .setColor("Red")
                 .setTimestamp();
-              await interaction
-                .reply?.({ embeds: [embed], ephemeral: true })
-                .catch(() => {});
-              setTimeout(async () => {
-                await interaction.deleteReply();
-              }, 3000);
+              await interaction.reply?.({ embeds: [embed] }).catch(() => {});
+              scheduleDelete(interaction, 3000);
               return;
             }
             if (
@@ -170,9 +177,7 @@ export class BotManager {
                 .setColor("Aqua")
                 .setTimestamp();
               await interaction.reply?.({ embeds: [embed] }).catch(() => {});
-              setTimeout(async () => {
-                await interaction.deleteReply();
-              }, 3000);
+              scheduleDelete(interaction, 3000);
               return;
             }
             await button.exec(interaction);
@@ -204,9 +209,7 @@ export class BotManager {
               await interaction
                 .reply?.({ embeds: [embed], ephemeral: true })
                 .catch(() => {});
-              setTimeout(async () => {
-                await interaction.deleteReply();
-              }, 3000);
+              scheduleDelete(interaction, 3000);
               return;
             }
             if (
@@ -223,9 +226,7 @@ export class BotManager {
                 .setColor("Aqua")
                 .setTimestamp();
               await interaction.reply?.({ embeds: [embed] }).catch(() => {});
-              setTimeout(async () => {
-                await interaction.deleteReply();
-              }, 3000);
+              scheduleDelete(interaction, 3000);
               return;
             }
             await modal.exec(interaction);

@@ -9,6 +9,7 @@ import { Config } from "./Config.js";
 import type { AllReadonly, CommandMeta } from "#types";
 
 export class Command {
+  private static instance: Command | undefined = undefined;
   private Client: Client;
   private commands: CommandMeta[] = [];
   private cooldown: {
@@ -21,6 +22,14 @@ export class Command {
 
   constructor(Client: Client) {
     this.Client = Client;
+    Command.instance = this;
+  }
+
+  public static getInstance(): Command {
+    if (!this.instance) {
+      throw new Error("Command handler is not initialized yet.");
+    }
+    return this.instance;
   }
 
   public async load(): Promise<AllReadonly<CommandMeta[]>> {

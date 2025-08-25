@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction } from "discord.js";
+import { ChatInputCommandInteraction, MessageFlags } from "discord.js";
 import type { CommandMeta } from "#types";
 import { Command, Logger } from "../../core/index.js";
 
@@ -26,21 +26,18 @@ export class HotSwap implements CommandMeta {
   public devOnly: boolean = true;
 
   public async exec(interaction: ChatInputCommandInteraction): Promise<void> {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const handler = Command.getInstance();
     switch (interaction.options.getString("type", true)) {
       case "unload":
-        if (
-          Command.prototype.unload(interaction.options.getString("name", true))
-        ) {
+        if (handler.unload(interaction.options.getString("name", true))) {
           await interaction.editReply("✅️ Unloaded successfully.");
         } else {
           await interaction.editReply("❌️ Unloaded failed.");
         }
         break;
       case "reload":
-        if (
-          Command.prototype.reload(interaction.options.getString("name", true))
-        ) {
+        if (handler.reload(interaction.options.getString("name", true))) {
           await interaction.editReply("✅️ Reloaded successfully.");
         } else {
           await interaction.editReply("❌️ Reloaded failed.");
