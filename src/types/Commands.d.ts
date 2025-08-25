@@ -29,6 +29,7 @@ import {
  * @property {'text' | 'slash' | 'Button' | 'Modal'} type - The type of command.
  * @property {function} exec - The function to execute when the command is invoked.
  * @property {number} [cooldown] - Optional cooldown period in seconds.
+ * @property {boolean} [isglobalcooldown] - If true, the cooldown applies globally.}
  * @property {boolean} [adminOnly] - If true, only admins can use this command.
  * @property {boolean} [devOnly] - If true, only developers can use this command.
  * @example
@@ -76,6 +77,7 @@ export type CommandMeta = {
       | ModalSubmitInteraction,
   ): Promise<void>;
   cooldown?: number;
+  isglobalcooldown?: boolean;
   adminOnly?: boolean;
   devOnly?: boolean;
 };

@@ -1,5 +1,5 @@
 import * as sqlite from "node:sqlite";
-import { Logger } from "../core";
+import { Logger } from "../core/index.js";
 
 export class SQLite {
   private dbFile: string;

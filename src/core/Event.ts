@@ -5,7 +5,7 @@ import { Client } from "discord.js";
 
 import { Logger } from "./Logger.js";
 import { ReadonlyUtil } from "../utils/Readonly.js";
-import type { Events, AllReadonly } from "../types";
+import type { Events, AllReadonly } from "#types";
 
 export class Event {
   private Client: Client;

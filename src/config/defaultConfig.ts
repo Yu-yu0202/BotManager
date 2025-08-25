@@ -1,5 +1,5 @@
 import { GatewayIntentBits } from "discord.js";
-import type { ConfigType } from "../types";
+import type { ConfigType } from "#types";
 
 /**
  * @type {Config}
@@ -9,6 +9,7 @@ export const defaultConfig: ConfigType = {
   token: process.env.DISCORD_TOKEN || "",
   intents: [GatewayIntentBits.Guilds],
   options: {
+    adminuserid: [],
     log: {
       logLevel: "info",
       enable_console: true,

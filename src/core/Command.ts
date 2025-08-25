@@ -1,19 +1,23 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import {
-  Client,
-  ApplicationCommandDataResolvable,
-  SlashCommandBuilder,
-} from "discord.js";
+import type { ApplicationCommandDataResolvable } from "discord.js";
+import { Client, SlashCommandBuilder } from "discord.js";
 
 import { Logger } from "./Logger.js";
 import { Config } from "./Config.js";
-import type { AllReadonly, CommandMeta } from "../types";
+import type { AllReadonly, CommandMeta } from "#types";
 
 export class Command {
   private Client: Client;
   private commands: CommandMeta[] = [];
+  private cooldown: {
+    commandName: string;
+    global: boolean;
+    user?: string;
+    seconds: number;
+    lastUsed: string;
+  }[] = [];
 
   constructor(Client: Client) {
     this.Client = Client;
@@ -95,21 +99,32 @@ export class Command {
 
   private async loadHotswapCommand(): Promise<void> {
     try {
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
       const hotswapPath = path.resolve(
         __dirname,
         "../include/command/Hotswap.js",
       );
       const HotSwapModule = await import(pathToFileURL(hotswapPath).href);
-      const HotSwapClass = HotSwapModule.default || HotSwapModule;
 
-      if (!HotSwapClass) {
-        Logger.log("Hotswap class not found in module", "warn");
-        return;
+      let loaded = false;
+      for (const key of Object.keys(HotSwapModule)) {
+        const exported = (HotSwapModule as any)[key];
+        if (this.isClassConstructor(exported)) {
+          const instance = await this.createCommandInstance(
+            exported,
+            "Hotswap.js",
+          );
+          if (instance && this.isValidCommandInstance(instance)) {
+            this.addOrUpdateCommand(instance);
+            loaded = true;
+            break;
+          }
+        }
       }
 
-      const instance = new HotSwapClass();
-      if (this.isValidCommandInstance(instance)) {
-        this.addOrUpdateCommand(instance);
+      if (!loaded) {
+        Logger.log("Hotswap class not found in module", "warn");
       }
     } catch (error) {
       Logger.log(
@@ -212,6 +227,53 @@ export class Command {
     }
 
     return true;
+  }
+
+  public shouldExecCommand(CN: string, user?: string): boolean {
+    const CommandInfo: CommandMeta | undefined = this.commands.find(
+      (d) => d.name === CN,
+    );
+    if (!CommandInfo) return false;
+
+    const cfg = Config.get();
+    const admins: readonly string[] | undefined = cfg.options?.adminuserid;
+    if (user && Array.isArray(admins) && admins.includes(user)) return true;
+
+    if (!CommandInfo.cooldown || CommandInfo.cooldown <= 0) return true;
+
+    const isGlobal = !!(CommandInfo.isglobalcooldown ?? false);
+    if (!isGlobal && !user) return true;
+
+    const now = Date.now();
+    const entry = this.cooldown.find(
+      (c) =>
+        c.commandName === CN &&
+        c.global === isGlobal &&
+        (isGlobal ? true : c.user === user),
+    );
+
+    if (!entry) {
+      this.cooldown.push({
+        commandName: CN,
+        global: isGlobal,
+        user: isGlobal ? undefined : user,
+        seconds: CommandInfo.cooldown,
+        lastUsed: new Date(now).toISOString(),
+      });
+      return true;
+    }
+
+    const last = new Date(entry.lastUsed).getTime();
+    const elapsedSec = Math.max(0, Math.floor((now - last) / 1000));
+    const requiredSec = entry.seconds ?? CommandInfo.cooldown;
+
+    if (elapsedSec >= requiredSec) {
+      entry.seconds = CommandInfo.cooldown;
+      entry.lastUsed = new Date(now).toISOString();
+      return true;
+    }
+
+    return false;
   }
 
   private addOrUpdateCommand(instance: CommandMeta): void {

@@ -5,8 +5,8 @@ import { Logger } from "./Logger.js";
 import { pathToFileURL } from "url";
 import { ReadonlyUtil } from "../utils/Readonly.js";
 import { defaultConfig } from "../config/defaultConfig.js";
-import type { AllReadonly } from "../types";
-import type { ConfigType } from "../types";
+import type { AllReadonly } from "#types";
+import type { ConfigType } from "#types";
 
 export class Config {
   private static instance: AllReadonly<ConfigType> | undefined = undefined;

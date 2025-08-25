@@ -1,24 +1,18 @@
-import { Config } from "./Config";
-import { Logger } from "./Logger";
-import { SQLite } from "../utils/SQLite";
-import { MySQL } from "../utils/MySQL";
+import { Config } from "./Config.js";
+import { Logger } from "./Logger.js";
+import { SQLite } from "../utils/SQLite.js";
+import { MySQL } from "../utils/MySQL.js";
 
 export class Database {
   private dbconfig = Config.get()["options"]!["db"]!;
-  private db!: SQLite | MySQL;
+  private db?: SQLite | MySQL;
+  private initializing?: Promise<void>;
+  private initialized = false;
 
   constructor() {
-    if (this.dbconfig.type === "sqlite") {
-      this.db = SQLite.createConnection(this.dbconfig.file);
-    } else if (this.dbconfig.type === "mysql") {
-      this.initializeMySQL();
-    } else {
+    if (this.dbconfig.type !== "sqlite" && this.dbconfig.type !== "mysql") {
       throw new Error("Invalid database type");
     }
-    Logger.log(
-      "✅️ Database connection has been successfully established.",
-      "info",
-    );
   }
 
   private async initializeMySQL(): Promise<void> {
@@ -31,8 +25,31 @@ export class Database {
   }
 
   private async ensureReady(): Promise<void> {
-    if (this.dbconfig.type === "mysql" && !this.db) {
-      await this.initializeMySQL();
+    if (this.initialized) return;
+    if (this.initializing) {
+      await this.initializing;
+      return;
+    }
+
+    this.initializing = (async () => {
+      if (!this.db) {
+        if (this.dbconfig.type === "sqlite") {
+          this.db = SQLite.createConnection(this.dbconfig.file);
+        } else if (this.dbconfig.type === "mysql") {
+          await this.initializeMySQL();
+        }
+      }
+      this.initialized = true;
+      Logger.log(
+        "✅️ Database connection has been successfully established.",
+        "info",
+      );
+    })();
+
+    try {
+      await this.initializing;
+    } finally {
+      this.initializing = undefined;
     }
   }
 
@@ -85,7 +102,7 @@ export class Database {
     await this.ensureReady();
 
     if (this.dbconfig.type === "sqlite") {
-      (this.db as SQLite).commit();
+      await (this.db as SQLite).commit();
     } else {
       await (this.db as MySQL).commit();
     }
@@ -96,7 +113,7 @@ export class Database {
     await this.ensureReady();
 
     if (this.dbconfig.type === "sqlite") {
-      (this.db as SQLite).rollback();
+      await (this.db as SQLite).rollback();
     } else {
       await (this.db as MySQL).rollback();
     }
@@ -106,7 +123,7 @@ export class Database {
     await this.ensureReady();
 
     if (this.dbconfig.type === "sqlite") {
-      return (this.db as SQLite).savepoint(name);
+      return await (this.db as SQLite).savepoint(name);
     } else {
       return await (this.db as MySQL).savepoint(name);
     }
@@ -116,7 +133,7 @@ export class Database {
     await this.ensureReady();
 
     if (this.dbconfig.type === "sqlite") {
-      (this.db as SQLite).releaseSavepoint(name);
+      await (this.db as SQLite).releaseSavepoint(name);
     } else {
       await (this.db as MySQL).releaseSavepoint(name);
     }
@@ -126,7 +143,7 @@ export class Database {
     await this.ensureReady();
 
     if (this.dbconfig.type === "sqlite") {
-      (this.db as SQLite).rollbackToSavepoint(name);
+      await (this.db as SQLite).rollbackToSavepoint(name);
     } else {
       await (this.db as MySQL).rollbackToSavepoint(name);
     }
@@ -143,11 +160,14 @@ export class Database {
   }
 
   public async close(): Promise<void> {
+    if (!this.db) return;
     if (this.dbconfig.type === "sqlite") {
       (this.db as SQLite).close();
     } else {
       await (this.db as MySQL).close();
     }
+    this.db = undefined;
+    this.initialized = false;
   }
 
   public getType(): "sqlite" | "mysql" {

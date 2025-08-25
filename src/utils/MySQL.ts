@@ -1,6 +1,6 @@
 import * as mysql from "mysql2/promise";
-import { Logger } from "../core";
-import { Config } from "../core";
+import { Logger } from "../core/index.js";
+import { Config } from "../core/index.js";
 
 export class MySQL {
   private connection: mysql.Connection | null = null;
@@ -56,7 +56,6 @@ export class MySQL {
     if (config) {
       instance.pool = mysql.createPool(config);
     } else {
-      // Config.get()からMySQL設定を取得
       const configData = Config.get();
       if (configData.options?.db?.type !== "mysql") {
         throw new Error(

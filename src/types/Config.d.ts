@@ -52,6 +52,7 @@ export type ConfigType = {
   token: string;
   intents: GatewayIntentBits[];
   options?: {
+    adminuserid?: string[];
     log?: {
       logLevel?: "verbose" | "debug" | "info" | "warn" | "error";
       enable_console?: boolean;

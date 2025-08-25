@@ -1,4 +1,5 @@
-import { Client, Interaction } from "discord.js";
+import { Client, EmbedBuilder } from "discord.js";
+import type { Interaction } from "discord.js";
 
 import { Logger } from "./Logger.js";
 import { Config } from "./Config.js";
@@ -67,6 +68,36 @@ export class BotManager {
             Logger.log(`Unknown command: ${interaction.commandName}`, "warn");
           } else {
             try {
+              const adminIds = Config.get().options?.adminuserid ?? [];
+              const isAdmin =
+                interaction.user && adminIds.includes(interaction.user.id);
+              if (command.adminOnly && !isAdmin) {
+                const embed = new EmbedBuilder()
+                  .setTitle("🚫 Forbidden")
+                  .setDescription("このコマンドは管理者専用です。")
+                  .setColor("Red")
+                  .setTimestamp();
+                await interaction
+                  .reply?.({ embeds: [embed], ephemeral: true })
+                  .catch(() => {});
+                return;
+              }
+              if (
+                !commandHandler.shouldExecCommand(
+                  command.name,
+                  interaction.user?.id,
+                )
+              ) {
+                const embed = new EmbedBuilder()
+                  .setTitle("⌛️ Throttled")
+                  .setDescription(
+                    "ちょっと待って！あなたの連打力にはまだ追いつけません…\n少し休憩してからもう一度どうぞ。🕒\n-# コマンドのクールダウンタイムが経過するまでお待ち下さい。",
+                  )
+                  .setColor("Aqua")
+                  .setTimestamp();
+                await interaction.reply?.({ embeds: [embed] }).catch(() => {});
+                return;
+              }
               await command.exec(interaction);
             } catch (error) {
               Logger.log(
@@ -102,6 +133,36 @@ export class BotManager {
             return;
           }
           try {
+            const adminIds = Config.get().options?.adminuserid ?? [];
+            const isAdmin =
+              interaction.user && adminIds.includes(interaction.user.id);
+            if (button.adminOnly && !isAdmin) {
+              const embed = new EmbedBuilder()
+                .setTitle("🚫 Forbidden")
+                .setDescription("このボタン操作は管理者専用です。")
+                .setColor("Red")
+                .setTimestamp();
+              await interaction
+                .reply?.({ embeds: [embed], ephemeral: true })
+                .catch(() => {});
+              return;
+            }
+            if (
+              !commandHandler.shouldExecCommand(
+                button.name,
+                interaction.user?.id,
+              )
+            ) {
+              const embed = new EmbedBuilder()
+                .setTitle("⌛️ Throttled")
+                .setDescription(
+                  "ちょっと待って！あなたの連打力にはまだ追いつけません… 少し休憩してからもう一度どうぞ。🕒\n-# コマンドのクールダウンタイムが経過するまでお待ち下さい。",
+                )
+                .setColor("Aqua")
+                .setTimestamp();
+              await interaction.reply?.({ embeds: [embed] }).catch(() => {});
+              return;
+            }
             await button.exec(interaction);
           } catch (error) {
             Logger.log(
@@ -119,6 +180,36 @@ export class BotManager {
             return;
           }
           try {
+            const adminIds = Config.get().options?.adminuserid ?? [];
+            const isAdmin =
+              interaction.user && adminIds.includes(interaction.user.id);
+            if (modal.adminOnly && !isAdmin) {
+              const embed = new EmbedBuilder()
+                .setTitle("🚫 Forbidden")
+                .setDescription("このモーダル操作は管理者専用です。")
+                .setColor("Red")
+                .setTimestamp();
+              await interaction
+                .reply?.({ embeds: [embed], ephemeral: true })
+                .catch(() => {});
+              return;
+            }
+            if (
+              !commandHandler.shouldExecCommand(
+                modal.name,
+                interaction.user?.id,
+              )
+            ) {
+              const embed = new EmbedBuilder()
+                .setTitle("⌛️ Throttled")
+                .setDescription(
+                  "ちょっと待って！あなたの連打力にはまだ追いつけません… 少し休憩してからもう一度どうぞ。🕒\n-# コマンドのクールダウンタイムが経過するまでお待ち下さい。",
+                )
+                .setColor("Aqua")
+                .setTimestamp();
+              await interaction.reply?.({ embeds: [embed] }).catch(() => {});
+              return;
+            }
             await modal.exec(interaction);
           } catch (error) {
             Logger.log(
@@ -135,5 +226,12 @@ export class BotManager {
     Logger.log("✅️ Commands registered successfully.", "info");
 
     Logger.log("✅️ Bot started successfully.", "info");
+  }
+
+  public static getClient(): Client {
+    if (!this.client) {
+      Core.fatal(new Error("Client is not initialized."));
+    }
+    return this.client!;
   }
 }

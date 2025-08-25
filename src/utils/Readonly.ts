@@ -1,4 +1,4 @@
-import type { AllReadonly } from "../types";
+import type { AllReadonly } from "#types";
 
 export class ReadonlyUtil {
   public static toReadonly<T extends object>(obj: T): AllReadonly<T> {

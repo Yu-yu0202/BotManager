@@ -16,3 +16,5 @@ export { Config } from "./Config.js";
 export { Command } from "./Command.js";
 export { Event } from "./Event.js";
 export { BotManager } from "./Client.js";
+export { Database as DatabaseManager } from "./Database.js";
+export { Database } from "./Database.js";
