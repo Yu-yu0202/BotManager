@@ -71,7 +71,7 @@ declare module "botmanager" {
       params?: any[],
     ): Promise<T | undefined>;
     public run(sql: string, params?: any[]): Promise<any>;
-    public queue(sql: string, params?: any[]): this;
+    public queue(sql: string, params?: any[]): Promise<this>;
     public commit(): Promise<this>;
     public rollback(): Promise<void>;
     public savepoint(name?: string): Promise<string>;
@@ -155,7 +155,7 @@ export class DatabaseManager {
     params?: any[],
   ): Promise<T | undefined>;
   public run(sql: string, params?: any[]): Promise<any>;
-  public queue(sql: string, params?: any[]): this;
+  public queue(sql: string, params?: any[]): Promise<this>;
   public commit(): Promise<this>;
   public rollback(): Promise<void>;
   public savepoint(name?: string): Promise<string>;

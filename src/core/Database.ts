@@ -89,7 +89,9 @@ export class Database {
     }
   }
 
-  public queue(sql: string, params?: any[]): this {
+  public async queue(sql: string, params?: any[]): Promise<this> {
+    await this.ensureReady();
+
     if (this.dbconfig.type === "sqlite") {
       (this.db as SQLite).queue(sql, params);
     } else {
