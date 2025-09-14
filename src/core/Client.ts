@@ -25,6 +25,8 @@ export class BotManager {
   private static client: Client | undefined = undefined;
 
   public static async start() {
+    const configData = await Config.load();
+
     if (this.client) {
       Logger.log("Client is already initialized.", "warn");
       return;
@@ -32,7 +34,8 @@ export class BotManager {
 
     Logger.log("Starting Bot...", "info");
 
-    const configData = await Config.load();
+    Logger.log("✅️ Configuration loaded successfully.", "info");
+
     this.client = new Client({
       intents: configData.intents,
     });
