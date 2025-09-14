@@ -3,7 +3,7 @@ import { GatewayIntentBits } from "discord.js";
 /**
  * Configuration type for the bot.
  * @typedef {Object} Config
- * @property {string} token - The bot's token for authentication.
+ * @property {string} token - The bot's token for authentication. **Warning: It's highly recommended that you use the environment variable.
  * @property {GatewayIntentBits[]} [intents] - Optional intents for the bot.
  * @property {Object} [options] - Optional configuration options.
  * @property {Object} [options.log] - Logging configuration.

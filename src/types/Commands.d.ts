@@ -1,8 +1,7 @@
 import {
-  ButtonInteraction,
   ChatInputCommandInteraction,
   Interaction,
-  ModalSubmitInteraction,
+  ContextMenuCommandInteraction,
 } from "discord.js";
 
 /**
@@ -26,7 +25,7 @@ import {
  *   choices?: (string | number)[];
  * } [options] - Optional command options.
  * @property {function} [autocomplete] - Optional function for command autocomplete.
- * @property {'text' | 'slash' | 'Button' | 'Modal'} type - The type of command.
+ * @property {'text' | 'context'} type - The type of command.
  * @property {function} exec - The function to execute when the command is invoked.
  * @property {number} [cooldown] - Optional cooldown period in seconds.
  * @property {boolean} [isglobalcooldown] - If true, the cooldown applies globally.}
@@ -68,13 +67,12 @@ export type CommandMeta = {
     choices?: (string | number)[];
   }[];
   autocomplete?(interaction: Interaction): Promise<void>;
-  type: "slash" | "Button" | "Modal";
+  type: "slash" | "context";
   exec(
     interaction:
       | Interaction
       | ChatInputCommandInteraction
-      | ButtonInteraction
-      | ModalSubmitInteraction,
+      | ContextMenuCommandInteraction,
   ): Promise<void>;
   cooldown?: number;
   isglobalcooldown?: boolean;

@@ -1,8 +1,12 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { ApplicationCommandDataResolvable } from "discord.js";
-import { Client, SlashCommandBuilder } from "discord.js";
+import type { ApplicationCommandDataResolvable, Guild } from "discord.js";
+import {
+  Client,
+  ContextMenuCommandBuilder,
+  SlashCommandBuilder,
+} from "discord.js";
 
 import { Logger } from "./Logger.js";
 import { Config } from "./Config.js";
@@ -32,7 +36,7 @@ export class Command {
     return this.instance;
   }
 
-  public async load(): Promise<AllReadonly<CommandMeta[]>> {
+  public async load(guildid?: string): Promise<AllReadonly<CommandMeta[]>> {
     try {
       Logger.log("Loading commands...", "info");
 
@@ -92,8 +96,11 @@ export class Command {
 
       Logger.log(`Loaded ${this.commands.length} commands.`, "info");
 
-      await this.registerSlashCommands();
-
+      if (!guildid) {
+        await this.registerSlashCommands();
+      } else {
+        await this.registerSlashCommandsWithGuildId(guildid);
+      }
       return this.commands.slice() as AllReadonly<CommandMeta[]>;
     } catch (error) {
       Logger.log(
@@ -354,26 +361,54 @@ export class Command {
     await Promise.allSettled(registrationPromises);
   }
 
+  private async registerSlashCommandsWithGuildId(
+    guildid: string,
+  ): Promise<void> {
+    const slashCommands = this.commands.filter((cmd) => cmd.type === "slash");
+    const meta: ApplicationCommandDataResolvable[] = slashCommands.map((cmd) =>
+      this.buildSlashCommandMeta(cmd),
+    );
+
+    const guild: Guild | undefined = this.Client.guilds.cache.get(guildid);
+    if (!guild) {
+      Logger.log(`Guild not found: ${guildid}`, "error");
+      return;
+    }
+
+    await guild.commands.set(meta).catch((error) => {
+      Logger.log(
+        `Failed to register commands for guild ${guildid}: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        "error",
+      );
+    });
+  }
+
   private buildSlashCommandMeta(
     cmd: CommandMeta,
   ): ApplicationCommandDataResolvable {
-    const builder = new SlashCommandBuilder()
-      .setName(cmd.name)
-      .setDescription(cmd.description);
+    switch (cmd.type) {
+      case "slash":
+        const Sbuilder = new SlashCommandBuilder()
+          .setName(cmd.name)
+          .setDescription(cmd.description);
+        if (Array.isArray(cmd.options)) {
+          for (const opt of cmd.options) {
+            if (!this.isValidOption(opt)) continue;
 
-    if (Array.isArray(cmd.options)) {
-      for (const opt of cmd.options) {
-        if (!this.isValidOption(opt)) continue;
-
-        const desc =
-          typeof opt.description === "string"
-            ? opt.description
-            : "No description";
-        this.addOptionToBuilder(builder, opt, desc);
-      }
+            const desc =
+              typeof opt.description === "string"
+                ? opt.description
+                : "No description";
+            this.addOptionToBuilder(Sbuilder, opt, desc);
+          }
+        }
+        return Sbuilder.toJSON();
+      case "context":
+        const Cbuilder = new ContextMenuCommandBuilder().setName(cmd.name);
+        return Cbuilder.toJSON();
     }
-
-    return builder.toJSON();
   }
 
   private isValidOption(opt: any): boolean {

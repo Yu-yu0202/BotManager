@@ -1,5 +1,5 @@
 import { Client, EmbedBuilder } from "discord.js";
-import type { Interaction } from "discord.js";
+import type { Guild, Interaction } from "discord.js";
 
 import { Logger } from "./Logger.js";
 import { Config } from "./Config.js";
@@ -7,7 +7,6 @@ import { Event } from "./Event.js";
 import { Command } from "./Command.js";
 import { Core } from "./index.js";
 
-// Simple memory-safe reply deletion queue to avoid piling up timers
 const deleteQueue: { interaction: any; at: number }[] = [];
 function scheduleDelete(interaction: any, delayMs: number): void {
   deleteQueue.push({ interaction, at: Date.now() + delayMs });
@@ -52,11 +51,11 @@ export class BotManager {
       });
     }
 
-    const eventHandler = new Event(this.client);
+    const eventManager = new Event(this.client);
 
-    await eventHandler.load();
+    await eventManager.load();
 
-    Logger.log(`✅️ Loaded ${eventHandler.get().length} events.`, "info");
+    Logger.log(`✅️ Loaded ${eventManager.get().length} events.`, "info");
 
     Logger.log("✅️ Events registered successfully.", "info");
 
@@ -71,14 +70,19 @@ export class BotManager {
       this.client?.destroy();
     }
 
-    const commandHandler = new Command(this.client);
-    await commandHandler.load();
+    const commandManager = new Command(this.client);
+    await commandManager.load();
+
+    this.client.on("guildCreate", async (guild: Guild) => {
+      const guildId = guild.id;
+      await commandManager.load(guildId);
+    });
 
     this.client.on(
       "interactionCreate",
       async <T extends Interaction>(interaction: T) => {
         if (interaction.isCommand()) {
-          const command = commandHandler.getCommand(interaction.commandName);
+          const command = commandManager.getCommand(interaction.commandName);
           if (!command) {
             Logger.log(`Unknown command: ${interaction.commandName}`, "warn");
           } else {
@@ -95,11 +99,10 @@ export class BotManager {
                 await interaction
                   .reply?.({ embeds: [embed], ephemeral: true })
                   .catch(() => {});
-                scheduleDelete(interaction, 3000);
                 return;
               }
               if (
-                !commandHandler.shouldExecCommand(
+                !commandManager.shouldExecCommand(
                   command.name,
                   interaction.user?.id,
                 )
@@ -124,7 +127,7 @@ export class BotManager {
             }
           }
         } else if (interaction.isAutocomplete()) {
-          const command = commandHandler.getCommand(interaction.commandName);
+          const command = commandManager.getCommand(interaction.commandName);
           if (command && command.autocomplete) {
             try {
               await command.autocomplete(interaction);
@@ -141,7 +144,7 @@ export class BotManager {
             );
           }
         } else if (interaction.isButton()) {
-          const button = commandHandler.getCommand(interaction.customId);
+          const button = commandManager.getCommand(interaction.customId);
           if (!button) {
             Logger.log(
               `Unknown button interaction: ${interaction.customId}`,
@@ -164,7 +167,7 @@ export class BotManager {
               return;
             }
             if (
-              !commandHandler.shouldExecCommand(
+              !commandManager.shouldExecCommand(
                 button.name,
                 interaction.user?.id,
               )
@@ -188,7 +191,7 @@ export class BotManager {
             );
           }
         } else if (interaction.isModalSubmit()) {
-          const modal = commandHandler.getCommand(interaction.customId);
+          const modal = commandManager.getCommand(interaction.customId);
           if (!modal) {
             Logger.log(
               `Unknown modal interaction: ${interaction.customId}`,
@@ -209,11 +212,10 @@ export class BotManager {
               await interaction
                 .reply?.({ embeds: [embed], ephemeral: true })
                 .catch(() => {});
-              scheduleDelete(interaction, 3000);
               return;
             }
             if (
-              !commandHandler.shouldExecCommand(
+              !commandManager.shouldExecCommand(
                 modal.name,
                 interaction.user?.id,
               )
@@ -240,7 +242,7 @@ export class BotManager {
       },
     );
 
-    Logger.log(`✅️ Loaded ${commandHandler.get().length} commands.`, "info");
+    Logger.log(`✅️ Loaded ${commandManager.get().length} commands.`, "info");
 
     Logger.log("✅️ Commands registered successfully.", "info");
 

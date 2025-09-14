@@ -4,7 +4,7 @@ import path from "path";
 import { Logger } from "./Logger.js";
 import { pathToFileURL } from "url";
 import { ReadonlyUtil } from "../utils/Readonly.js";
-import { defaultConfig } from "../config/defaultConfig.js";
+import { defaultConfig } from "../include/config/defaultConfig.js";
 import type { AllReadonly } from "#types";
 import type { ConfigType } from "#types";
 

@@ -21,7 +21,6 @@ export class MySQL {
     if (config) {
       instance.connection = await mysql.createConnection(config);
     } else {
-      // Config.get()からMySQL設定を取得
       const configData = Config.get();
       if (configData.options?.db?.type !== "mysql") {
         throw new Error(
