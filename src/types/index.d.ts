@@ -5,7 +5,7 @@ declare module "botmanager" {
   export type { CommandMeta } from "./Commands.js";
   export type { Events } from "./Events.js";
 
-  export class BotWindow {
+  export class BotManager {
     static start(): Promise<void>;
     static getClient(): Client;
   }

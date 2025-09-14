@@ -1,3 +1,7 @@
+import fs from "fs";
+import path from "path";
+import { Config } from "./Config.js";
+
 export class Logger {
   private static readonly levelColors: Record<string, string> = {
     verbose: "\x1b[37m",
@@ -13,11 +17,30 @@ export class Logger {
     | "info"
     | "warn"
     | "error" = "info";
-
+  private static readonly logPath: string | undefined =
+    Config.get().options?.log?.file_path;
+  private static readonly isFileLogEnabled: boolean =
+    !!Config.get().options?.log?.enable_file;
   public static setLogLevel(
     level: "verbose" | "debug" | "info" | "warn" | "error",
   ): void {
     this.currentLogLevel = level;
+  }
+
+  private static toFile(
+    message: string,
+    level: "verbose" | "debug" | "info" | "warn" | "error" | "fatal" = "info",
+  ): void {
+    if (!this.isFileLogEnabled) return;
+    const timestamp: string = new Date().toISOString();
+    if (this.logPath && Config.get().options?.log?.enable_file) {
+      const logDir = path.dirname(this.logPath);
+      if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
+      }
+      const plainMessage = `[${timestamp}] [${level.toUpperCase()}] ${message}\n`;
+      fs.appendFileSync(this.logPath, plainMessage, "utf8");
+    }
   }
 
   public static log(
@@ -42,6 +65,7 @@ export class Logger {
 
     if (isLoggable(level)) {
       console.log(formattedMessage);
+      this.toFile(message, level);
       if (level === "fatal") {
         process.exit(1);
       }

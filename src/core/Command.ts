@@ -36,7 +36,7 @@ export class Command {
     return this.instance;
   }
 
-  public async load(guildid?: string): Promise<AllReadonly<CommandMeta[]>> {
+  public async load(): Promise<AllReadonly<CommandMeta[]>> {
     try {
       Logger.log("Loading commands...", "info");
 
@@ -96,11 +96,8 @@ export class Command {
 
       Logger.log(`Loaded ${this.commands.length} commands.`, "info");
 
-      if (!guildid) {
-        await this.registerSlashCommands();
-      } else {
-        await this.registerSlashCommandsWithGuildId(guildid);
-      }
+      await this.registerSlashCommands();
+
       return this.commands.slice() as AllReadonly<CommandMeta[]>;
     } catch (error) {
       Logger.log(
@@ -326,7 +323,10 @@ export class Command {
 
     if (existingIndex !== -1) {
       this.commands[existingIndex] = instance;
-      Logger.log(`✅️ Command ${instance.name} reloaded (overwritten).`, "info");
+      Logger.log(
+        `✅️ Command ${instance.name} reloaded (overwritten).`,
+        "info",
+      );
     } else {
       this.commands.push(instance);
       Logger.log(`✅ Command ${instance.name} loaded successfully.`, "info");
@@ -361,7 +361,7 @@ export class Command {
     await Promise.allSettled(registrationPromises);
   }
 
-  private async registerSlashCommandsWithGuildId(
+  public async registerSlashCommandsWithGuildId(
     guildid: string,
   ): Promise<void> {
     const slashCommands = this.commands.filter((cmd) => cmd.type === "slash");

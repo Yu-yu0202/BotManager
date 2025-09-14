@@ -1,11 +1,13 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { Client } from "discord.js";
+import { Client, type ClientEvents } from "discord.js";
 
 import { Logger } from "./Logger.js";
 import { ReadonlyUtil } from "../utils/Readonly.js";
 import type { Events, AllReadonly } from "#types";
+
+type InferEventName<T> = T extends Events<infer K> ? K : never;
 
 export class Event {
   private Client: Client;
@@ -73,12 +75,8 @@ export class Event {
               );
               continue;
             }
-            if (
-              instance &&
-              typeof instance.name === "string" &&
-              typeof instance.exec === "function"
-            ) {
-              this.events.push(instance as Events);
+            if (instance && typeof instance.exec === "function") {
+              this.events.push(instance);
               Logger.log(
                 `✅️ Successfully loaded event ${instance.name}.`,
                 "info",
@@ -98,10 +96,16 @@ export class Event {
       Logger.log(`Loaded a total of ${this.events.length} events.`, "info");
 
       for (const event of this.events) {
+        type EventName = InferEventName<typeof event>;
+
         if (event.once) {
-          this.Client.once(event.name, (...args) => event.exec(...args));
+          this.Client.once(event.name, (...args: ClientEvents[EventName]) =>
+            event.exec(...args),
+          );
         } else {
-          this.Client.on(event.name, (...args) => event.exec(...args));
+          this.Client.on(event.name, (...args: ClientEvents[EventName]) =>
+            event.exec(...args),
+          );
         }
         Logger.log(
           `Registered event listener: ${event.name} (once: ${!!event.once})`,

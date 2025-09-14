@@ -69,10 +69,11 @@ export type CommandMeta = {
   autocomplete?(interaction: Interaction): Promise<void>;
   type: "slash" | "context";
   exec(
-    interaction:
-      | Interaction
-      | ChatInputCommandInteraction
-      | ContextMenuCommandInteraction,
+    interaction: this["type"] extends "slash"
+      ? ChatInputCommandInteraction
+      : this["type"] extends "context"
+        ? ContextMenuCommandInteraction
+        : never,
   ): Promise<void>;
   cooldown?: number;
   isglobalcooldown?: boolean;

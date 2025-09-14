@@ -79,7 +79,7 @@ export class BotManager {
         "info",
       );
       const guildId = guild.id;
-      await commandManager.load(guildId);
+      await commandManager.registerSlashCommandsWithGuildId(guildId);
       Logger.log(
         `✅️Command registered to guild ${guild.name}(${guild.id}) successfully.`,
         "info",
