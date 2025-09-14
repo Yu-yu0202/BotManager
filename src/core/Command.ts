@@ -326,7 +326,7 @@ export class Command {
 
     if (existingIndex !== -1) {
       this.commands[existingIndex] = instance;
-      Logger.log(`♻️ Command ${instance.name} reloaded (overwritten).`, "warn");
+      Logger.log(`✅️ Command ${instance.name} reloaded (overwritten).`, "info");
     } else {
       this.commands.push(instance);
       Logger.log(`✅ Command ${instance.name} loaded successfully.`, "info");

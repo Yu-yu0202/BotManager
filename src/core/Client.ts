@@ -74,8 +74,16 @@ export class BotManager {
     await commandManager.load();
 
     this.client.on("guildCreate", async (guild: Guild) => {
+      Logger.log(
+        `Joined new guild: ${guild.name}, register commands...`,
+        "info",
+      );
       const guildId = guild.id;
       await commandManager.load(guildId);
+      Logger.log(
+        `✅️Command registered to guild ${guild.name}(${guild.id}) successfully.`,
+        "info",
+      );
     });
 
     this.client.on(
