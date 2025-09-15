@@ -17,14 +17,14 @@ export class Logger {
     | "info"
     | "warn"
     | "error" = "info";
-  private static get logPath(): string | undefined {
+  private static getLogPath(): string | undefined {
     try {
       return Config.get().options?.log?.file_path;
     } catch {
       return undefined;
     }
   }
-  private static get isFileLogEnabled(): boolean {
+  private static getIsFileLogEnabled(): boolean {
     try {
       return !!Config.get().options?.log?.enable_file;
     } catch {
@@ -41,10 +41,10 @@ export class Logger {
     message: string,
     level: "verbose" | "debug" | "info" | "warn" | "error" | "fatal" = "info",
   ): void {
-    if (!this.isFileLogEnabled) return;
+    if (!this.getIsFileLogEnabled()) return;
     const timestamp: string = new Date().toISOString();
-    const logPath = this.logPath;
-    if (logPath && this.isFileLogEnabled) {
+    const logPath = this.getLogPath();
+    if (logPath && this.getIsFileLogEnabled()) {
       const logDir = path.dirname(logPath);
       if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, { recursive: true });
