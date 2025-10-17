@@ -1,7 +1,8 @@
 import {
-  ChatInputCommandInteraction,
-  Interaction,
-  ContextMenuCommandInteraction,
+  ChatInputCommandInteraction as _ChatInputCommandInteraction,
+  Interaction as _Interaction,
+  ContextMenuCommandInteraction as _ContextMenuCommandInteraction,
+  AutocompleteInteraction as _AutocompleteInteraction,
 } from "discord.js";
 
 /**
@@ -54,25 +55,21 @@ export type CommandMeta = {
   options?: {
     name: string;
     description?: string;
-    type:
-      | "string"
-      | "number"
-      | "boolean"
-      | "user"
-      | "channel"
-      | "role"
-      | "mentionable"
-      | "attachment";
+    type: CommandOptionType;
     required?: boolean;
     choices?: (string | number)[];
   }[];
-  autocomplete?(interaction: Interaction): Promise<void>;
-  type: "slash" | "context";
+  autocomplete?(
+    interaction: this["type"] extends "slash"
+      ? _AutocompleteInteraction
+      : never,
+  ): Promise<void>;
+  type: CommandType;
   exec(
     interaction: this["type"] extends "slash"
-      ? ChatInputCommandInteraction
+      ? _ChatInputCommandInteraction
       : this["type"] extends "context"
-        ? ContextMenuCommandInteraction
+        ? _ContextMenuCommandInteraction
         : never,
   ): Promise<void>;
   cooldown?: number;
@@ -80,3 +77,22 @@ export type CommandMeta = {
   adminOnly?: boolean;
   devOnly?: boolean;
 };
+
+export type CommandType = "slash" | "context";
+export type CommandOptionType =
+  | "string"
+  | "number"
+  | "boolean"
+  | "user"
+  | "channel"
+  | "role"
+  | "mentionable"
+  | "attachment";
+
+export type ChatInputCommandInteraction = _ChatInputCommandInteraction;
+export type ContextMenuCommandInteraction = _ContextMenuCommandInteraction;
+export type AutocompleteInteraction = _AutocompleteInteraction;
+export type Interaction =
+  | _ChatInputCommandInteraction
+  | _ContextMenuCommandInteraction
+  | _AutocompleteInteraction;

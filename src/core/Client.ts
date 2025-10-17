@@ -23,6 +23,7 @@ setInterval(() => {
 
 export class BotManager {
   private static client: Client | undefined = undefined;
+  private static thenStop: Array<() => Promise<void> | void> = [];
 
   public static async start() {
     const configData = await Config.load();
@@ -265,5 +266,61 @@ export class BotManager {
       Core.fatal(new Error("Client is not initialized."));
     }
     return this.client!;
+  }
+
+  public static async stop(): Promise<void> {
+    if (!this.client) {
+      Logger.log("Client is not initialized.", "warn");
+      return;
+    }
+    const tasks = this.thenStop.map((fn: () => Promise<void> | void) => {
+      try {
+        return Promise.resolve(fn());
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        Logger.log(`❌️ Error in thenStop handler: ${message}`, "error");
+        return Promise.resolve();
+      }
+    });
+    if (tasks.length > 0) {
+      await Promise.allSettled(tasks);
+    }
+    this.client
+      .destroy()
+      .then(() => {
+        Logger.log("✅️ Client stopped successfully.", "info");
+      })
+      .catch((error: Error) => {
+        Logger.log(`❌️ Error stopping client: ${error.message}`, "error");
+      })
+      .finally(() => {
+        this.client = undefined;
+      });
+  }
+
+  public static StopHandler(
+    target: any,
+    propertyKey?: string,
+    descriptor?: PropertyDescriptor,
+  ): void {
+    if (
+      typeof target === "function" &&
+      propertyKey === undefined &&
+      descriptor === undefined
+    ) {
+      this.thenStop.push(target);
+      return;
+    }
+    const originalMethod = descriptor?.value;
+    if (typeof originalMethod === "function") {
+      if (typeof target === "function") {
+        this.thenStop.push(() => originalMethod.call(target));
+      } else {
+        Logger.log(
+          "StopHandler decorator on instance method is not supported. Use a static method or pass a function directly.",
+          "warn",
+        );
+      }
+    }
   }
 }

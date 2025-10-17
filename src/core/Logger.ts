@@ -11,12 +11,14 @@ export class Logger {
     error: "\x1b[31m",
     fatal: "\x1b[41m\x1b[37m",
   };
+
   private static currentLogLevel:
     | "verbose"
     | "debug"
     | "info"
     | "warn"
     | "error" = "info";
+
   private static getLogPath(): string | undefined {
     try {
       return Config.get().options?.log?.file_path;
@@ -24,6 +26,7 @@ export class Logger {
       return undefined;
     }
   }
+
   private static getIsFileLogEnabled(): boolean {
     try {
       return !!Config.get().options?.log?.enable_file;
@@ -31,6 +34,7 @@ export class Logger {
       return false;
     }
   }
+
   public static setLogLevel(
     level: "verbose" | "debug" | "info" | "warn" | "error",
   ): void {
@@ -62,7 +66,7 @@ export class Logger {
 
     const resetColor = "\x1b[0m";
     const color = this.levelColors[level] || "";
-    const formattedMessage = `${color}[${timestamp}] [${level.toUpperCase()}] ${message}${resetColor}`;
+    const formattedMessage = `${color}[${timestamp}] [${level.toUpperCase()}] ${message}${resetColor}\n`;
 
     const isLoggable = (
       level: "verbose" | "debug" | "info" | "warn" | "error" | "fatal",
@@ -75,7 +79,7 @@ export class Logger {
     };
 
     if (isLoggable(level)) {
-      console.log(formattedMessage);
+      process.stdout.write(formattedMessage);
       this.toFile(message, level);
       if (level === "fatal") {
         process.exit(1);
