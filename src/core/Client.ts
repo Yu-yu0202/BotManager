@@ -25,6 +25,25 @@ export class BotManager {
   private static client: Client | undefined = undefined;
   private static thenStop: Array<() => Promise<void> | void> = [];
 
+  static {
+    process.on("SIGINT", async () => {
+      await this.stop();
+      process.exit(0);
+    });
+    process.on("SIGTERM", async () => {
+      await this.stop();
+      process.exit(0);
+    });
+    process.on("SIGQUIT", async () => {
+      await this.stop();
+      process.exit(0);
+    });
+    process.on("SIGBREAK", async () => {
+      await this.stop();
+      process.exit(0);
+    });
+  }
+
   public static async start() {
     const configData = await Config.load();
 
