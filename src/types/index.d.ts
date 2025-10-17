@@ -3,11 +3,21 @@ declare module "botmanager" {
   export type { ConfigType } from "./Config.js";
   export type { AllReadonly } from "./Readonly.js";
   export type { CommandMeta } from "./Commands.js";
+  export type {
+    CommandType,
+    CommandOptionType,
+    ChatInputCommandInteraction,
+    ContextMenuCommandInteraction,
+    AutocompleteInteraction,
+    Interaction,
+  } from "./Commands.js";
   export type { Events } from "./Events.js";
 
   export class BotManager {
     static start(): Promise<void>;
     static getClient(): Client;
+    static stop(): Promise<void>;
+    static StopHandler(target: any, propertyKey?: string, descriptor?: PropertyDescriptor): void;
   }
 
   export class Core {
@@ -23,13 +33,13 @@ declare module "botmanager" {
 
   export class Config {
     static load(): Promise<
-      import("./Readonly.js").AllReadonly<import("./Config.js").Config>
+      import("./Readonly.js").AllReadonly<import("./Config.js").ConfigType>
     >;
     static get(): import("./Readonly.js").AllReadonly<
-      import("./Config.js").Config
+      import("./Config.js").ConfigType
     >;
     static reload(): Promise<
-      import("./Readonly.js").AllReadonly<import("./Config.js").Config>
+      import("./Readonly.js").AllReadonly<import("./Config.js").ConfigType>
     >;
   }
 
@@ -87,11 +97,21 @@ declare module "botmanager" {
 export type { ConfigType } from "./Config.js";
 export type { AllReadonly } from "./Readonly.js";
 export type { CommandMeta } from "./Commands.js";
+export type {
+  CommandType,
+  CommandOptionType,
+  ChatInputCommandInteraction,
+  ContextMenuCommandInteraction,
+  AutocompleteInteraction,
+  Interaction,
+} from "./Commands.js";
 export type { Events } from "./Events.js";
 
 export class BotManager {
   static start(): Promise<void>;
   static getClient(): Client;
+  static stop(): Promise<void>;
+  static StopHandler(target: any, propertyKey?: string, descriptor?: PropertyDescriptor): void;
 }
 
 export class Core {
@@ -107,13 +127,13 @@ export class Logger {
 
 export class Config {
   static load(): import("./Readonly.js").AllReadonly<
-    import("./Config.js").Config
+    import("./Config.js").ConfigType
   >;
   static get(): import("./Readonly.js").AllReadonly<
-    import("./Config.js").Config
+    import("./Config.js").ConfigType
   >;
   static reload(): import("./Readonly.js").AllReadonly<
-    import("./Config.js").Config
+    import("./Config.js").ConfigType
   >;
 }
 
